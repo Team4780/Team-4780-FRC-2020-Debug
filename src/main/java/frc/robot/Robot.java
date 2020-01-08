@@ -14,11 +14,13 @@ import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Spark;
-//import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.*;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+
 
 // END IMPORTS
 
@@ -34,32 +36,30 @@ public class Robot extends TimedRobot {
   private static final int kJoystickPort = 0;
   private static final int kJoystick2Port = 1;
 
-// Drive VictorSP's
-//  VictorSP leftVictorSP = new VictorSP(leftVictorPort);
-//  VictorSP rightVictorSP = new VictorSP(rightVictorPort);
+// Drive VictorSP's (commented out 1/6/20 for redesigned gyro code testing)
+ VictorSP leftVictorSP = new VictorSP(leftVictorPort);
+ VictorSP rightVictorSP = new VictorSP(rightVictorPort);
  
 // Intake Spark's
   Spark leftIntakeSpark = new Spark(leftIntakeSparkPort);
   Spark rightIntakeSpark = new Spark(rightIntakeSparkPort);  
 
-// New Gyro Instantiation 
+// Gyro Instantiation 
   int P, I, D = 1;
   private static final double kP = 0.005; // propotional turning constant
   double angle;
   boolean turned = true;
   int mustTurnDegree = 0;
   private static final double kAngleSetpoint = 0.0;
-
-// Drivetrain (with VictorSP's)
-  //DifferentialDrive m_myRobot = new DifferentialDrive(leftVictorSP, rightVictorSP);
   private ADXRS450_Gyro m_gyro = new ADXRS450_Gyro(kGyroPort);
+
+//Joystick Instantiation
   private Joystick m_joystick = new Joystick(kJoystickPort);
   private Joystick m_joystick2 = new Joystick(kJoystick2Port);
 
-// Gyro Stuff (creates DriveTrain as well)
+// DriveTrain Creation
   private DifferentialDrive m_myRobot
-    = new DifferentialDrive(new VictorSP(leftVictorPort),
-    new VictorSP(rightVictorPort));
+    = new DifferentialDrive(leftVictorSP, rightVictorSP);    
 
 // Auto Choices in Shuffleboard
   private static final String kAutoLine = "Drive Straight - Auto Line";
@@ -67,6 +67,9 @@ public class Robot extends TimedRobot {
   private static final String kAutoLineLeft = "Drive Straight - Turn Left";
   private String m_autoSelected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
+
+// Timer for autonomous
+  public double timer = 0;
 
 // END TIMED ROBOT METHOD
 
@@ -92,9 +95,11 @@ public void robotInit() {
   m_chooser.addOption("Drive Straight - Turn Right", kAutoLineRight);
   m_chooser.addOption("Drive Straight - Turn Left", kAutoLineLeft);
   SmartDashboard.putData("Auto Chooser", m_chooser);
+
 }
 
 // END ROBOT INIT METHOD
+
 
 @Override
 public void robotPeriodic() {
@@ -104,6 +109,7 @@ public void robotPeriodic() {
 
 @Override
 public void autonomousInit() {
+  m_autoSelected = m_chooser.getSelected();
 }
 
 // END AUTONOMOUS INIT METHOD
@@ -115,11 +121,18 @@ public void autonomousPeriodic() {
   switch (m_autoSelected) {
     case kAutoLine:
       default:
-  //code goes here
+      if (Timer.getMatchTime()<timer+5){
+        m_myRobot.tankDrive(0.25, -0.25);
+      }
+      else{
+        m_myRobot.tankDrive(0, 0);
+      }
       break;
+
     case kAutoLineRight:
   //code goes here
       break;
+
     case kAutoLineLeft:
   //code goes here  
       break;
@@ -151,7 +164,6 @@ public void teleopPeriodic() {
   // mustTurnDegree = m_joystick.getPOV();
   // }
   // if(!turned)turnDegrees(mustTurnDegree);
-    
   /**
 	 * The motor speed is set from the joystick while the RobotDrive turning
 	 * value is assigned from the error between the setpoint and the gyro angle.
@@ -166,12 +178,6 @@ public void teleopPeriodic() {
 
 @Override
 public void testPeriodic() {
-}
-
-//
-protected void execute() {
-  SmartDashboard.putNumber("Gyro Angle", m_gyro.getAngle());
-
 }
 }
 
