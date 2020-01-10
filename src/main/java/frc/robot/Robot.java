@@ -20,6 +20,10 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.Spark;
 import edu.wpi.first.wpilibj.smartdashboard.*;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 
 
 // END IMPORTS
@@ -31,10 +35,15 @@ public class Robot extends TimedRobot {
   private static final int rightVictorPort = 1;
   private static final int leftIntakeSparkPort = 2;
   private static final int rightIntakeSparkPort = 3;
+  private static final int indexingSparkPort = 4;
 
 // Joystick Ports
   private static final int kJoystickPort = 0;
   private static final int kJoystick2Port = 1;
+
+// Button set-up
+  private static final int bPowerCellIntake = 1;
+  private static final int bPowerCellExpel = 2;
 
 // Drive VictorSP's (commented out 1/6/20 for redesigned gyro code testing)
  VictorSP leftVictorSP = new VictorSP(leftVictorPort);
@@ -43,6 +52,9 @@ public class Robot extends TimedRobot {
 // Intake Spark's
   Spark leftIntakeSpark = new Spark(leftIntakeSparkPort);
   Spark rightIntakeSpark = new Spark(rightIntakeSparkPort);  
+
+// Indexing Spark
+  Spark indexingSpark = new Spark (indexingSparkPort);
 
 // Gyro Instantiation 
   int P, I, D = 1;
@@ -61,7 +73,14 @@ public class Robot extends TimedRobot {
   private DifferentialDrive m_myRobot
     = new DifferentialDrive(leftVictorSP, rightVictorSP);    
 
-// Auto Choices in Shuffleboard
+// Encoder Creation
+  public static Encoder elevatorEncoder;
+
+// Pneumatic's Creation
+  public static Compressor compressor;
+  public static DoubleSolenoid indexPiston;
+
+  // Auto Choices in Shuffleboard
   private static final String kAutoLine = "Drive Straight - Auto Line";
   private static final String kAutoLineRight = "Drive Straight - Turn Right";
   private static final String kAutoLineLeft = "Drive Straight - Turn Left";
@@ -79,6 +98,14 @@ public void robotInit() {
   m_joystick = new Joystick(0);
   m_joystick2 = new Joystick(1);
 
+// Encoder Instantiation
+  elevatorEncoder = new Encoder(4, 5, true, Encoder.EncodingType.k4X);
+  elevatorEncoder.setDistancePerPulse((Math.PI * 1.804) / 192);
+
+// Pneumatics Instantiation
+  compressor = new Compressor(1);
+  indexPiston = new DoubleSolenoid(4, 5);
+
 // Camera Instantiation
   CameraServer camera = CameraServer.getInstance();
   VideoSource usbCam = camera.startAutomaticCapture("cam0", 0);
@@ -95,7 +122,6 @@ public void robotInit() {
   m_chooser.addOption("Drive Straight - Turn Right", kAutoLineRight);
   m_chooser.addOption("Drive Straight - Turn Left", kAutoLineLeft);
   SmartDashboard.putData("Auto Chooser", m_chooser);
-
 }
 
 // END ROBOT INIT METHOD
@@ -103,6 +129,8 @@ public void robotInit() {
 
 @Override
 public void robotPeriodic() {
+// Post Encoder Distance to Shuffleboard
+  SmartDashboard.putNumber("Encoder Distance", elevatorEncoder.getDistance());
 }
 
 // END ROBOT PERIODIC METHOD
@@ -172,6 +200,20 @@ public void teleopPeriodic() {
   // Invert the direction of the turn if we are going backwards
   turningValue = Math.copySign(turningValue, m_joystick.getY());
   m_myRobot.arcadeDrive(m_joystick.getY(), turningValue);
+
+  // Intake/Outtake Control Statements
+  if (m_joystick2.getRawButton(bPowerCellIntake)) {
+    leftIntakeSpark.set(0.5);
+    rightIntakeSpark.set(-0.5);
+  } 
+  else if (m_joystick2.getRawButton(bPowerCellExpel)) {
+    leftIntakeSpark.set(-1);
+    rightIntakeSpark.set(1);
+  }
+  else{
+    leftIntakeSpark.set(0);
+    rightIntakeSpark.set(0);
+  }
 }
 
 // END TELEOP PERIODIC
